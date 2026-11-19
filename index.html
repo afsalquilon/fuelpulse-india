@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="FuelPulse India" />
   <meta name="description" content="Smart Fuel, Odometer, GPS Distance & Mileage Tracker PWA for Indian Scooter, Bike & Car owners." />
+  <link rel="manifest" id="pwa-manifest-link" />
   <title>FuelPulse India — Smart Fuel & Mileage Tracker PWA</title>
 
   <!-- Google Fonts: Inter & JetBrains Mono for odometer/gauge digits -->
@@ -79,7 +80,6 @@
     .tabular-nums {
       font-variant-numeric: tabular-nums;
     }
-    /* Smooth pulse animation for live GPS indicator & low fuel alert */
     @keyframes pulseRing {
       0% { transform: scale(0.95); opacity: 0.9; }
       70% { transform: scale(1.35); opacity: 0; }
@@ -93,7 +93,6 @@
       background: currentColor;
       animation: pulseRing 1.8s infinite;
     }
-    /* Hide scrollbars on horizontal vehicle pills while preserving scroll */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
@@ -152,10 +151,10 @@
           <span id="notif-dot" class="hidden absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500"></span>
         </button>
 
-        <!-- Install / GitHub Guide Button -->
-        <button onclick="openModal('install-modal')" title="Install as Mobile App / GitHub Guide" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1.5 text-xs font-semibold">
-          <i data-lucide="smartphone" class="w-4 h-4 text-accent"></i>
-          <span class="hidden lg:inline">App Guide</span>
+        <!-- Install Mobile App / PWA Button -->
+        <button onclick="openModal('install-modal')" id="header-install-btn" title="Install FuelPulse as Mobile or Desktop App" class="px-2.5 sm:px-3 py-2.5 rounded-xl bg-accent-soft border border-accent hover:opacity-90 text-accent transition flex items-center gap-1.5 text-xs font-bold">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Install App</span>
         </button>
 
         <!-- Theme Toggle -->
@@ -578,7 +577,7 @@
             <canvas id="gps-route-canvas" class="w-full h-full block"></canvas>
             <div id="gps-canvas-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 pointer-events-none">
               <i data-lucide="map-pin" class="w-6 h-6 text-slate-400 mb-1"></i>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Start a GPS Ride or click <strong>Simulate Ride</strong> on laptop to plot live route path</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Start a GPS Ride or click <strong>Simulate 14.2 km Ride</strong> on laptop to plot live route path</p>
             </div>
           </div>
 
@@ -930,7 +929,7 @@
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-500 dark:text-slate-400">Cloud User ID:</span>
-                <span id="cloud-uid-full" class="font-mono text-[10px] text-slate-600 dark:text-slate-300 select-all">Initializing...</span>
+                <span id="cloud-uid-full" class="font-mono text-[10px] text-slate-600 dark:text-slate-300 select-all">local-device-id</span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-500 dark:text-slate-400">Pending Offline Queue:</span>
@@ -1034,11 +1033,11 @@
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Rate (₹/L) *</label>
-            <input type="number" id="fuel-price" step="0.01" min="1" required value="106.15" oninput="syncFuelCalc('price')" class="w-full px-2.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input type="number" id="fuel-price" step="0.01" min="1" required value="105.60" oninput="syncFuelCalc('price')" class="w-full px-2.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
           <div>
             <label class="block text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mb-1">Liters (L) *</label>
-            <input type="number" id="fuel-liters" step="0.01" min="0.05" required placeholder="4.71" oninput="syncFuelCalc('liters')" class="w-full px-2.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/50 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input type="number" id="fuel-liters" step="0.01" min="0.05" required placeholder="4.73" oninput="syncFuelCalc('liters')" class="w-full px-2.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/50 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
         </div>
 
@@ -1104,7 +1103,7 @@
           </label>
         </div>
 
-        <!-- Optional Note + One-Tap GPS Station/Locality Auto-Tagging (when Online) -->
+        <!-- Optional Note + One-Tap GPS Station/Locality Auto-Tagging -->
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Station Locality / Note</label>
@@ -1152,7 +1151,7 @@
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Registration No. *</label>
-            <input type="text" id="veh-reg" required placeholder="KL-02-AB-1234" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input type="text" id="veh-reg" required placeholder="KL-02-AB-1234" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
         </div>
 
@@ -1210,6 +1209,22 @@
         </button>
       </div>
       <div class="p-5 space-y-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        <!-- Always-Visible Primary Install Action -->
+        <div id="pwa-native-install-box" class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">Install on Phone or Laptop</span>
+            <span id="pwa-install-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500">App Ready</span>
+          </div>
+          <button onclick="triggerNativePwaInstall()" class="w-full py-3 rounded-xl bg-accent text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition">
+            <i data-lucide="download" class="w-4 h-4"></i> Install FuelPulse App Now
+          </button>
+          <div id="pwa-manual-steps" class="text-[11px] text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
+            <p><strong>Android (Chrome):</strong> Tap the browser menu (<strong>⋮</strong>) → <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
+            <p><strong>iPhone / iPad (Safari):</strong> Tap the <strong>Share</strong> icon → <strong>Add to Home Screen</strong>.</p>
+            <p><strong>Laptop (Chrome / Edge):</strong> Click the <strong>Install icon</strong> in the right side of the address bar.</p>
+          </div>
+        </div>
+
         <div class="p-3.5 rounded-2xl bg-accent-soft border border-accent">
           <p class="font-bold text-accent mb-1">1. Publish Free on GitHub Pages (from your Laptop)</p>
           <ol class="list-decimal list-inside space-y-1 text-xs">
@@ -1235,8 +1250,8 @@
   "background_color": "#0B1120",
   "theme_color": "#059669",
   "icons": [
-    { "src": "https://placehold.co/192x192/059669/ffffff?text=FP", "sizes": "192x192", "type": "image/png" },
-    { "src": "https://placehold.co/512x512/059669/ffffff?text=FP", "sizes": "512x512", "type": "image/png" }
+    { "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23059669'/%3E%3Ctext x='50%25' y='55%25' font-size='220' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'%3EFP%3C/text%3E%3C/svg%3E", "sizes": "192x192", "type": "image/svg+xml" },
+    { "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23059669'/%3E%3Ctext x='50%25' y='55%25' font-size='220' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'%3EFP%3C/text%3E%3C/svg%3E", "sizes": "512x512", "type": "image/svg+xml" }
   ]
 }</pre>
         </div>
@@ -1250,15 +1265,9 @@
             </button>
           </div>
           <pre id="pwa-sw-code" class="p-3 rounded-xl bg-slate-950 text-sky-300 font-mono text-[11px] overflow-x-auto border border-slate-800">const CACHE_NAME = 'fuelpulse-india-v1';
-const ASSETS = ['./', './index.html', './manifest.json'];
+const ASSETS = ['./', './index.html'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))));
 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));</pre>
-        </div>
-
-        <div id="pwa-native-install-box" class="hidden">
-          <button onclick="triggerNativePwaInstall()" class="w-full py-3 rounded-xl bg-accent text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg">
-            <i data-lucide="download" class="w-4 h-4"></i> Install FuelPulse App Now
-          </button>
         </div>
 
         <button onclick="closeModal('install-modal')" class="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-xs">Done</button>
@@ -1564,7 +1573,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
           }
         }
       } catch (err) {
-        console.error('Failed to read localStorage:', err);
+        console.warn('Local storage read fallback:', err);
       }
       const initial = createInitialSampleState();
       saveState(initial);
@@ -1575,7 +1584,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch (err) {
-        console.error('Failed to save to localStorage:', err);
+        console.warn('Local storage write fallback:', err);
       }
     }
 
@@ -1594,7 +1603,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         fbAuth = getAuth(fbApp);
         fbDb = getFirestore(fbApp);
 
-        // RULE 3: Authenticate FIRST before attaching any Firestore queries
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(fbAuth, __initial_auth_token);
         } else {
@@ -1622,8 +1630,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       unsubCloudListeners.forEach(fn => fn());
       unsubCloudListeners = [];
 
-      // RULE 1: Strict private user path /artifacts/{appId}/users/{userId}/{collectionName}
-      // RULE 2: Simple collection() queries without orderBy/limit
       const profileRef = doc(fbDb, 'artifacts', appId, 'users', userId, 'profile', 'main');
       const unsubProf = onSnapshot(profileRef, (snap) => {
         if (snap.exists() && appState.entryMode === 'online') {
@@ -1671,6 +1677,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
           }
         });
         if (changed) {
+          appState.lastSyncedAt = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
           saveState();
           renderAll();
         }
@@ -1710,7 +1717,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         return;
       }
 
-      // Sync each queued refill & trip with deterministic IDs (no duplicates)
       for (const r of offlineRefills) {
         if (fbDb && currentCloudUser) {
           await pushDocumentToCloud('refills', r.id, r);
@@ -1737,7 +1743,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
 
     async function signInWithGoogleCloud() {
       if (!fbAuth) {
-        showToast('Cloud demo sync active! Deploy with Firebase config for multi-device Google Sign-In.', 'info');
+        showToast('Local & offline sync active! Use Garage → Export JSON Backup to move data between devices.', 'info');
         return;
       }
       try {
@@ -1754,7 +1760,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
           showToast(`Signed in as ${res.user.email || res.user.displayName}!`, 'success');
         }
       } catch (err) {
-        showToast('Google Sign-In popup closed or unavailable in this preview frame.', 'warning');
+        showToast('Google Sign-In unavailable in this browser window. Local storage & JSON sync remain active.', 'warning');
       }
     }
 
@@ -1816,7 +1822,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         }
       }
 
-      // Sync Now banner button
       const syncBannerBtn = document.getElementById('sync-now-banner-btn');
       const syncCountEl = document.getElementById('sync-now-count');
       if (syncBannerBtn && syncCountEl) {
@@ -1828,7 +1833,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         }
       }
 
-      // Sync Center UI in Profile Tab
       const centerBadge = document.getElementById('sync-center-badge');
       if (centerBadge) {
         centerBadge.textContent = isOnlineMode ? 'Online Cloud Active' : 'Offline Local Mode';
@@ -1909,14 +1913,12 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       document.getElementById('personal-location-pill').textContent =
         `${p.city || 'India'}, ${p.state || 'Kerala'} • ₹${Number(p.defaultFuelRate || 105.6).toFixed(2)}/L`;
 
-      // Generate dynamic smart insights from user's own logs
       const target = vehicle.targetMileage || (vehicle.type === 'Scooter' ? 48 : vehicle.type === 'Bike' ? 36 : 18);
       const diff = Number((metrics.avgMileage - target).toFixed(1));
       const diffPhrase = diff >= 0
         ? `beating your ${target} km/l target by +${diff} km/l`
         : `${Math.abs(diff)} km/l below your ${target} km/l target (${p.ridingPattern} mode)`;
 
-      // Find best performing fuel station from vehicle's logs
       const measured = metrics.refills.filter(r => r.calculatedMileage > 0);
       let bestStationNote = '';
       if (measured.length > 0) {
@@ -2519,7 +2521,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       gpsState.simInterval = setInterval(() => {
         if (gpsState.isPaused) return;
         heading += (Math.random() - 0.48) * 0.22;
-        const stepKm = 0.71; // Reaches exact 14.20 km in 20 ticks
+        const stepKm = 0.71;
         const nextDist = Math.min(targetKm, Number((gpsState.distanceKm + stepKm).toFixed(2)));
         const deltaLat = Math.cos(heading) * 0.0045;
         const deltaLon = Math.sin(heading) * 0.0045;
@@ -2810,8 +2812,18 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
     function copyCodeSnippet(elementId, label) {
       const el = document.getElementById(elementId);
       if (!el) return;
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(el.textContent)
+          .then(() => showToast(`Copied ${label} to clipboard!`, 'success'))
+          .catch(() => fallbackCopyText(el.textContent, label));
+      } else {
+        fallbackCopyText(el.textContent, label);
+      }
+    }
+
+    function fallbackCopyText(text, label) {
       const textarea = document.createElement('textarea');
-      textarea.value = el.textContent;
+      textarea.value = text;
       document.body.appendChild(textarea);
       textarea.select();
       try {
@@ -2952,6 +2964,19 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       canvas.addEventListener('mouseleave', () => tooltip.classList.add('hidden'));
     }
 
+    function drawTopRoundedBar(ctx, x, y, w, h, radius) {
+      const r = Math.min(radius, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x, y + h);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h);
+      ctx.closePath();
+      ctx.fill();
+    }
+
     function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas || !canvas.parentElement) return;
@@ -2990,7 +3015,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       const values = dataList.map(r => chartMode === 'mileage' ? r.calculatedMileage : Number(r.amountPaid));
       const maxVal = Math.max(...values) * 1.18 || 10;
 
-      // Grid lines
       ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(100, 116, 139, 0.16)';
       ctx.lineWidth = 1;
       ctx.font = '500 10px JetBrains Mono, monospace';
@@ -3028,18 +3052,14 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         grad.addColorStop(1, cBot);
         ctx.fillStyle = grad;
 
-        ctx.beginPath();
-        ctx.roundRect(x, y, barW, barH, [6, 6, 0, 0]);
-        ctx.fill();
+        drawTopRoundedBar(ctx, x, y, barW, barH, 6);
 
-        // Value label on top of bar
         ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
         ctx.font = '700 10px JetBrains Mono, monospace';
         ctx.textAlign = 'center';
         const topLabel = chartMode === 'mileage' ? val.toFixed(1) : `₹${Math.round(val)}`;
         ctx.fillText(topLabel, x + barW / 2, y - 6);
 
-        // Date label on X-axis
         ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
         ctx.font = '500 10px Inter, sans-serif';
         ctx.fillText(formatShortDate(item.date), x + barW / 2, pad.top + plotH + 16);
@@ -3114,11 +3134,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       gpsState.isTracking = true;
       gpsState.isPaused = false;
       gpsState.isSimulating = false;
-      if (!gpsState.startTime) {
-        gpsState.startTime = Date.now() - gpsState.elapsedMs;
-      } else {
-        gpsState.startTime = Date.now() - gpsState.elapsedMs;
-      }
+      gpsState.startTime = Date.now() - gpsState.elapsedMs;
 
       if (!gpsState.timerInterval) {
         gpsState.timerInterval = setInterval(updateGpsTimerDisplay, 1000);
@@ -3421,13 +3437,17 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         if (fromBell) sendTestRefuelNotification();
         return;
       }
-      const perm = await Notification.requestPermission();
-      updateNotificationBadge();
-      if (perm === 'granted') {
-        showToast('Rider refuel notifications enabled!', 'success');
-        sendTestRefuelNotification();
-      } else {
-        showToast('Notifications blocked by browser; in-app low-fuel banners will still alert you.', 'warning');
+      try {
+        const perm = await Notification.requestPermission();
+        updateNotificationBadge();
+        if (perm === 'granted') {
+          showToast('Rider refuel notifications enabled!', 'success');
+          sendTestRefuelNotification();
+        } else {
+          showToast('Notifications blocked by browser; in-app low-fuel banners will still alert you.', 'warning');
+        }
+      } catch (err) {
+        showToast('In-app low-fuel banners are active.', 'info');
       }
     }
 
@@ -3437,15 +3457,19 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       const msg = `${vehicle.name}: ~${metrics.remainingRangeKm} km range left (${metrics.tankPercent}% fuel). Next refuel expected ${metrics.predictedDateLabel}.`;
       showToast(msg, 'info');
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('FuelPulse India — Rider Alert', { body: msg });
+        try {
+          new Notification('FuelPulse India — Rider Alert', { body: msg });
+        } catch (e) { /* Ignore if blocked in iframe */ }
       }
     }
 
     function triggerBrowserLowFuelAlert(vehicle, metrics) {
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(`Low Fuel Alert: ${vehicle.name}`, {
-          body: `Only ~${metrics.remainingRangeKm} km (${metrics.tankPercent}%) remaining. Refuel soon!`
-        });
+        try {
+          new Notification(`Low Fuel Alert: ${vehicle.name}`, {
+            body: `Only ~${metrics.remainingRangeKm} km (${metrics.tankPercent}%) remaining. Refuel soon!`
+          });
+        } catch (e) { /* Ignore if blocked in iframe */ }
       }
     }
 
@@ -3575,13 +3599,68 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       }, 3600);
     }
 
+    function attachBlobManifest(manifestLink) {
+      const svgIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23059669'/%3E%3Ctext x='50%25' y='55%25' font-size='220' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'%3EFP%3C/text%3E%3C/svg%3E";
+      const fallbackManifest = {
+        name: 'FuelPulse India — Fuel & Mileage Tracker',
+        short_name: 'FuelPulse IN',
+        start_url: window.location.protocol.startsWith('http') ? window.location.href : './index.html',
+        display: 'standalone',
+        background_color: '#0B1120',
+        theme_color: '#059669',
+        icons: [
+          { src: svgIcon, sizes: '192x192', type: 'image/svg+xml' },
+          { src: svgIcon, sizes: '512x512', type: 'image/svg+xml' }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(fallbackManifest)], { type: 'application/manifest+json' });
+      manifestLink.href = URL.createObjectURL(blob);
+    }
+
     function initPwaCapabilities() {
+      const manifestLink = document.getElementById('pwa-manifest-link');
+      const isStandardHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+
+      if (manifestLink) {
+        if (!isStandardHttp) {
+          attachBlobManifest(manifestLink);
+        } else {
+          fetch('./manifest.json', { method: 'HEAD' })
+            .then((res) => {
+              if (res.ok) {
+                manifestLink.href = './manifest.json';
+              } else {
+                attachBlobManifest(manifestLink);
+              }
+            })
+            .catch(() => attachBlobManifest(manifestLink));
+        }
+      }
+
+      if ('serviceWorker' in navigator && isStandardHttp) {
+        fetch('./sw.js', { method: 'HEAD' })
+          .then((res) => {
+            if (res.ok) {
+              navigator.serviceWorker.register('./sw.js').catch(() => {});
+            }
+          })
+          .catch(() => {});
+      }
+
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredInstallPrompt = e;
-        const box = document.getElementById('pwa-native-install-box');
-        if (box) box.classList.remove('hidden');
+        const statusEl = document.getElementById('pwa-install-status');
+        if (statusEl) statusEl.textContent = '1-Tap Install Available';
       });
+
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        const statusEl = document.getElementById('pwa-install-status');
+        if (statusEl) statusEl.textContent = 'Installed';
+        showToast('FuelPulse India installed successfully!', 'success');
+      });
+
       window.addEventListener('resize', () => {
         if (currentTab === 'dashboard') renderAnalyticsChart();
         if (currentTab === 'gps') drawGpsRouteCanvas();
@@ -3589,15 +3668,21 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
     }
 
     async function triggerNativePwaInstall() {
-      if (!deferredInstallPrompt) {
-        showToast('Use your browser menu → "Install App" or "Add to Home Screen".', 'info');
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          deferredInstallPrompt = null;
+        }
         return;
       }
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-      const box = document.getElementById('pwa-native-install-box');
-      if (box) box.classList.add('hidden');
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        showToast('On iPhone/iPad Safari: tap Share (↑) at the bottom → "Add to Home Screen".', 'info');
+      } else {
+        showToast('Open your live GitHub Pages link in Chrome/Edge and tap Menu (⋮) → "Install app".', 'info');
+      }
     }
 
     function escapeHtml(str) {
@@ -3645,7 +3730,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       showToast('Network offline — automatically switched to Offline Local Queue Mode.', 'warning');
     });
 
-    // Expose functions globally for inline HTML event attributes
     Object.assign(window, {
       switchTab,
       selectVehicle,
