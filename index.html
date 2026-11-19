@@ -352,15 +352,34 @@
         <div class="lg:col-span-7 space-y-5">
           <!-- Fuel & Range Progress Gauge Card -->
           <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center justify-between gap-2 mb-3">
               <div>
                 <h2 class="font-bold text-base flex items-center gap-2">
                   <i data-lucide="fuel" class="w-4 h-4 text-emerald-500"></i>
                   Live Fuel Tank &amp; Range Estimator
                 </h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Calculated from last refill &amp; current odometer reading</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Calculated from actual liters filled &amp; odometer distance</p>
               </div>
-              <span id="tank-percent-badge" class="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">14% Full</span>
+              <div class="flex items-center gap-2 shrink-0">
+                <button type="button" onclick="toggleTankCalibrateBar()" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/15 text-slate-700 dark:text-slate-300 hover:text-emerald-500 text-xs font-semibold flex items-center gap-1 transition" title="Manually set exact liters currently in tank">
+                  <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                  <span>Adjust Fuel</span>
+                </button>
+                <span id="tank-percent-badge" class="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">14% Full</span>
+              </div>
+            </div>
+
+            <!-- Inline Quick Fuel Level Calibration Bar -->
+            <div id="tank-calibrate-bar" class="hidden mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div class="text-xs">
+                <span class="font-bold text-slate-800 dark:text-slate-200 block">Set Exact Fuel Left in Tank (Liters)</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">Calibrates the gauge at your current odometer reading</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="number" id="tank-calibrate-input" step="0.1" min="0" placeholder="e.g., 1.5" class="w-24 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                <button type="button" onclick="applyTankCalibration()" class="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-bold whitespace-nowrap transition">Save</button>
+                <button type="button" onclick="toggleTankCalibrateBar(false)" class="px-2 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold">Cancel</button>
+              </div>
             </div>
 
             <!-- Progress Bar Container with Threshold Marker -->
@@ -1089,9 +1108,9 @@
           <label class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 cursor-pointer">
             <div>
               <span class="text-xs font-bold block">Full Tank (Auto-Cut)</span>
-              <span class="text-[10px] text-slate-500 dark:text-slate-400">Tank-to-tank accuracy</span>
+              <span class="text-[10px] text-slate-500 dark:text-slate-400">Check only when filled to brim</span>
             </div>
-            <input type="checkbox" id="fuel-full-tank" checked onchange="updateLiveRefillEstimate()" class="w-4 h-4 accent-emerald-600 rounded" />
+            <input type="checkbox" id="fuel-full-tank" onchange="onFullTankToggleChange()" class="w-4 h-4 accent-emerald-600 rounded" />
           </label>
 
           <label class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 cursor-pointer">
@@ -1544,6 +1563,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
     let chartBarsMeta = [];
     let lastNotifiedLowFuelKey = '';
     let deferredInstallPrompt = null;
+    let userToggledFullTank = false;
 
     // Live GPS Tracking State
     let gpsState = {
@@ -2035,18 +2055,56 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         : Number(appState.profile.defaultFuelRate || 105.60);
       const runningCostPerKm = avgMileage > 0 ? Number((latestFuelPrice / avgMileage).toFixed(2)) : 0;
 
+      // Chronological Fuel Tank Balance Estimator (handles partial fills, full tanks & manual calibration)
       let fuelRemainingLiters = vehicle.tankCapacity * 0.5;
       const maxRangeKm = Math.round(vehicle.tankCapacity * avgMileage);
+      const resCap = vehicle.reserveCapacity || vehicle.tankCapacity * 0.18;
+      const cal = (vehicle.fuelCalibration && typeof vehicle.fuelCalibration.liters === 'number')
+        ? vehicle.fuelCalibration
+        : null;
 
-      if (refills.length > 0) {
-        const lastRefill = refills[refills.length - 1];
-        const resCap = vehicle.reserveCapacity || vehicle.tankCapacity * 0.18;
-        const fuelAfterRefill = lastRefill.fullTank
-          ? vehicle.tankCapacity
-          : Math.min(vehicle.tankCapacity, (lastRefill.reserveHit ? resCap : resCap * 1.4) + Number(lastRefill.liters));
-        const kmSinceLastFill = Math.max(0, vehicle.currentOdometer - lastRefill.odometer);
+      let runningTankLiters = cal ? cal.liters : vehicle.tankCapacity * 0.5;
+      let anchorOdo = cal ? cal.atOdometer : null;
+      const relevantRefills = cal
+        ? refills.filter(r => r.odometer > cal.atOdometer)
+        : refills;
+
+      if (relevantRefills.length > 0) {
+        relevantRefills.forEach((r, idx) => {
+          const filledLiters = Math.max(0, Number(r.liters) || 0);
+          if (idx === 0 && anchorOdo === null) {
+            if (r.fullTank) {
+              runningTankLiters = vehicle.tankCapacity;
+            } else {
+              const baseBeforeFirstFill = r.reserveHit ? Math.min(resCap * 0.5, 0.5) : 0;
+              runningTankLiters = Math.min(vehicle.tankCapacity, baseBeforeFirstFill + filledLiters);
+            }
+          } else {
+            const prevOdo = idx === 0 ? anchorOdo : relevantRefills[idx - 1].odometer;
+            const kmBetween = Math.max(0, r.odometer - prevOdo);
+            const burnedBetween = avgMileage > 0 ? (kmBetween / avgMileage) : 0;
+            let preFillLiters = Math.max(0, runningTankLiters - burnedBetween);
+
+            if (r.reserveHit && preFillLiters > resCap) {
+              preFillLiters = resCap;
+            }
+
+            if (r.fullTank) {
+              runningTankLiters = vehicle.tankCapacity;
+            } else {
+              runningTankLiters = Math.min(vehicle.tankCapacity, preFillLiters + filledLiters);
+            }
+          }
+        });
+
+        const lastRelevant = relevantRefills[relevantRefills.length - 1];
+        const kmSinceLastFill = Math.max(0, vehicle.currentOdometer - lastRelevant.odometer);
         const fuelConsumed = avgMileage > 0 ? (kmSinceLastFill / avgMileage) : 0;
-        fuelRemainingLiters = Math.max(0, Number((fuelAfterRefill - fuelConsumed).toFixed(2)));
+        fuelRemainingLiters = Math.max(0, Number((runningTankLiters - fuelConsumed).toFixed(2)));
+      } else if (cal) {
+        const kmSinceCal = Math.max(0, vehicle.currentOdometer - cal.atOdometer);
+        const fuelConsumed = avgMileage > 0 ? (kmSinceCal / avgMileage) : 0;
+        fuelRemainingLiters = Math.max(0, Number((cal.liters - fuelConsumed).toFixed(2)));
       }
 
       const remainingRangeKm = Math.max(0, Math.round(fuelRemainingLiters * avgMileage));
@@ -2326,11 +2384,13 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
 
       document.getElementById('fuel-modal-vehicle-sub').textContent = `${vehicle.name} • ${vehicle.regNo}`;
       document.getElementById('fuel-edit-id').value = editId || '';
+      userToggledFullTank = false;
       setFormFuelMode(appState.entryMode === 'online' && navigator.onLine ? 'online' : 'offline');
 
       if (editId) {
         const entry = appState.refills.find(r => r.id === editId);
         if (!entry) return;
+        userToggledFullTank = true;
         document.getElementById('fuel-modal-title').textContent = 'Edit Fuel Refill';
         document.getElementById('fuel-amount').value = entry.amountPaid;
         document.getElementById('fuel-price').value = entry.pricePerLiter;
@@ -2354,7 +2414,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('fuel-datetime').value = now.toISOString().slice(0, 16);
-        document.getElementById('fuel-full-tank').checked = true;
+        document.getElementById('fuel-full-tank').checked = false;
         document.getElementById('fuel-reserve-hit').checked = metrics.isLowFuel;
         document.getElementById('fuel-note').value = '';
       }
@@ -2875,16 +2935,30 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
           amountEl.value = (liters * price).toFixed(2);
         }
       }
+
+      const finalLiters = parseFloat(litersEl.value);
+      const vehicle = getActiveVehicle();
+      if (!userToggledFullTank && vehicle && !isNaN(finalLiters)) {
+        document.getElementById('fuel-full-tank').checked = finalLiters >= vehicle.tankCapacity * 0.85;
+      }
+
+      updateLiveRefillEstimate();
+    }
+
+    function onFullTankToggleChange() {
+      userToggledFullTank = true;
       updateLiveRefillEstimate();
     }
 
     function applyRupeePreset(amount) {
+      userToggledFullTank = false;
       const amountEl = document.getElementById('fuel-amount');
       amountEl.value = amount;
       syncFuelCalc('amount');
     }
 
     function applyFullTankPreset() {
+      userToggledFullTank = true;
       const vehicle = getActiveVehicle();
       const metrics = computeVehicleMetrics(vehicle);
       const neededLiters = Math.max(0.5, Number((vehicle.tankCapacity - metrics.fuelRemainingLiters).toFixed(2)));
@@ -2893,17 +2967,58 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       syncFuelCalc('liters');
     }
 
+    function toggleTankCalibrateBar(forceState = null) {
+      const bar = document.getElementById('tank-calibrate-bar');
+      if (!bar) return;
+      const shouldShow = forceState !== null ? forceState : bar.classList.contains('hidden');
+      bar.classList.toggle('hidden', !shouldShow);
+      if (shouldShow) {
+        const vehicle = getActiveVehicle();
+        const metrics = computeVehicleMetrics(vehicle);
+        const input = document.getElementById('tank-calibrate-input');
+        input.max = vehicle.tankCapacity;
+        input.value = metrics.fuelRemainingLiters;
+        input.focus();
+      }
+    }
+
+    function applyTankCalibration() {
+      const vehicle = getActiveVehicle();
+      const input = document.getElementById('tank-calibrate-input');
+      const liters = parseFloat(input.value);
+      if (isNaN(liters) || liters < 0 || liters > vehicle.tankCapacity) {
+        showToast(`Enter a valid fuel level between 0 and ${vehicle.tankCapacity} L.`, 'error');
+        return;
+      }
+      vehicle.fuelCalibration = {
+        liters: Number(liters.toFixed(2)),
+        atOdometer: Number(vehicle.currentOdometer)
+      };
+      saveState();
+      toggleTankCalibrateBar(false);
+      renderAll();
+      showToast(`Tank calibrated to ${liters.toFixed(2)} L at ${vehicle.currentOdometer.toLocaleString('en-IN')} km!`, 'success');
+    }
+
     function updateLiveRefillEstimate() {
       const vehicle = getActiveVehicle();
       const metrics = computeVehicleMetrics(vehicle);
       const odo = parseFloat(document.getElementById('fuel-odometer').value);
       const liters = parseFloat(document.getElementById('fuel-liters').value);
+      const isFullTank = document.getElementById('fuel-full-tank').checked;
       const previewEl = document.getElementById('fuel-live-estimate');
       if (!previewEl) return;
 
+      if (isFullTank && !isNaN(liters) && liters < vehicle.tankCapacity * 0.5) {
+        previewEl.textContent = `Full Tank is checked — tank level will be set to ${vehicle.tankCapacity} L (uncheck for partial fill).`;
+        return;
+      }
+
       const prevRefill = metrics.refills[metrics.refills.length - 1];
       if (!prevRefill) {
-        previewEl.textContent = 'First refill entry — sets your baseline odometer anchor.';
+        previewEl.textContent = !isNaN(liters) && liters > 0
+          ? `Baseline fill: tank estimator will start with ${isFullTank ? vehicle.tankCapacity : liters} L.`
+          : 'First refill entry — sets your baseline odometer anchor.';
         return;
       }
 
@@ -3745,6 +3860,9 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       openFuelModal,
       setFormFuelMode,
       syncFuelCalc,
+      onFullTankToggleChange,
+      toggleTankCalibrateBar,
+      applyTankCalibration,
       applyRupeePreset,
       applyFullTankPreset,
       updateLiveRefillEstimate,
